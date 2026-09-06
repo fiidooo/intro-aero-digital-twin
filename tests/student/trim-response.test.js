@@ -125,3 +125,58 @@ describe("trim-response physics", () => {
     });
   });
 });
+
+import { feature } from "../../src/student/features/trim-response.feature.js";
+import { initialAircraft } from "../../src/core/data/aircraft.js";
+import { featureEntries } from "../../src/core/features/index.js";
+import { createCapabilityRegistry, modelsForFeature } from "../../src/core/capabilities/capabilityContract.js";
+import { capabilityContext } from "../../src/core/simulation/runtime.js";
+import { resolveFeatureAnalysis } from "../../src/core/features/featureContract.js";
+import { normalizePlot } from "../../src/core/visualization/visualizationContract.js";
+
+function analyzeThroughRuntime(aircraft = initialAircraft) {
+  const registry = createCapabilityRegistry(featureEntries);
+  expect(registry.issues).toEqual([]);
+  const context = capabilityContext(modelsForFeature(feature.id, registry), aircraft);
+  return { context, analysis: resolveFeatureAnalysis(feature, aircraft, context) };
+}
+
+describe("trim-response dashboard integration", () => {
+  it("uses the actual runtime capability map and renders valid results and verification", () => {
+    const { context, analysis } = analyzeThroughRuntime();
+    expect(context["loads.pitch.component-sum"].version).toBeGreaterThanOrEqual(1);
+    expect(analysis.results.find(({ key }) => key === "trimAngleDeg").value).toBeCloseTo(2.86479, 5);
+    expect(analysis.results.find(({ key }) => key === "trimmed").value).toBe("not trimmed");
+    expect(analysis.results.every(({ value }) => typeof value === "string" || Number.isFinite(value))).toBe(true);
+    expect(analysis.verificationCases).toHaveLength(3);
+    expect(analysis.verificationCases.every(({ label, passed }) => typeof label === "string" && label.length > 0 && passed === true)).toBe(true);
+    expect(analysis.decision.interpretation).toContain("restoring");
+  });
+
+  it("keeps the axis labels and zero-moment reference line through plot normalization", () => {
+    const { analysis } = analyzeThroughRuntime();
+    const plot = normalizePlot(analysis.plots[0]);
+    expect(plot.xLabel).toBe("Angle of attack (deg)");
+    expect(plot.yLabel).toBe("Pitching-moment coefficient, Cm");
+    expect(plot.referenceLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ axis: "y", value: 0, label: "Cm = 0" }),
+    ]));
+    expect(plot.series[0].points).toEqual(expect.arrayContaining([
+      expect.objectContaining({ x: 0, y: 0.04 }),
+    ]));
+  });
+
+  it("handles zero slope through model evaluation and dashboard analysis without null runtime values", () => {
+    const { context, analysis } = analyzeThroughRuntime({ ...initialAircraft, cmAlphaPerRad: 0 });
+    expect(context["stability.pitch.cm-alpha"].values.trimAngleDeg).toBe("not available");
+    expect(analysis.results.find(({ key }) => key === "trimAngleDeg").value).toBe("not available");
+    expect(analysis.results.find(({ key }) => key === "disturbanceTendency").value).toBe("neutral");
+  });
+
+  it("reports a missing prerequisite instead of fabricating valid analysis", () => {
+    const analysis = resolveFeatureAnalysis(feature, initialAircraft, {});
+    expect(analysis.results[0].label).toBe("Analysis unavailable");
+    expect(analysis.results[0].note).toBe("Stage 3 loads.pitch.component-sum capability v1 is required.");
+    expect(analysis.verificationCases[0].passed).toBe(false);
+  });
+});
