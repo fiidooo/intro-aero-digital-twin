@@ -117,22 +117,22 @@ alpha = 2.86 deg
 delta_alpha = +2.00 deg
 
 Angle conversion:
-alpha_rad = 
-delta_alpha_rad = [SHOW WORK]
+alpha_rad = alpha * pi/180 = 0.050 rad
+delta_alpha_rad = delta_alpha * pi/180 = 0.035 rad
 
 Current pitching-moment coefficient:
-Cm(alpha) = [SHOW WORK]
+Cm(alpha) = Cm0 + Cm_alpha * alpha_rad = 0.0000669
 
 Trim angle:
-alpha_trim_rad = [SHOW WORK]
-alpha_trim_deg = [SHOW WORK]
+alpha_trim_rad = -(Cm0/Cm_alpha) = 0.05 rad
+alpha_trim_deg = alpha_trim_rad * 180/pi = 2.86479 deg
 
 Disturbance response:
-delta_Cm = [SHOW WORK]
+delta_Cm = Cm_alpha * delta_alpha_rad = -0.028
 
 Expected classifications:
-selected condition = [trimmed / not trimmed]
-disturbance tendency = [restoring / neutral / destabilizing]
+selected condition = not trimmed
+disturbance tendency = restoring
 ```
 
 ## 9. Verification Cases — STUDENT COMPLETES
@@ -144,7 +144,17 @@ Define all three cases before implementation. Include exact inputs, expected out
 Use your Section 8 reference calculation.
 
 ```text
-[COMPLETE]
+Inputs:
+Cm0 = 0.04
+Cm_alpha = -0.8 1/rad
+alpha = 2.86 deg
+delta_alpha = +2.00 deg
+calculated outputs:
+alpha at trimmed = 2.86479 deg or 0.05 rad
+pitching moment response to disturbance (delta_Cm) = -0.028
+
+tolerance = +-0.0001, this is because the expected delta_Cm is rounded to three decimal places.
+
 ```
 
 ### 9.2 Behavioral case
@@ -152,7 +162,8 @@ Use your Section 8 reference calculation.
 Change one input and state the exact trend or sign that must result.
 
 ```text
-[COMPLETE]
+Changed input: delta_alpha = +3.00 deg
+changed results: delta_alpha_rad is now 0.052, resulting in delta_Cm becoming more negative (0.0523 * -0.8 = -0.042)
 ```
 
 ### 9.3 Boundary or sanity case
@@ -160,7 +171,8 @@ Change one input and state the exact trend or sign that must result.
 Use an informative boundary such as zero slope, zero disturbance, or the trim condition. State the exact behavior expected and why division by zero or a false physical claim must not occur.
 
 ```text
-[COMPLETE]
+boundary: Cm_alpha = 0
+behavior expected: delta_Cm is always zero at any given alpha because the equation is entirely multiplicative (delta_Cm = Cm_alpha * delta_alpha_rad), resulting in no response when there is a disturbance.
 ```
 
 ## 10. Feature Requirements
@@ -196,7 +208,7 @@ Do not modify any existing file.
 In one or two sentences, state what decision the completed feature will support and what it cannot establish.
 
 ```text
-[COMPLETE]
+The completed feature will support finding the trimmed angle-of-attack and pitching moment response when a disturbance is present. The feature cannot help show how the aircraft movement is over time because it only evaluates a single data snapshot at that moment.
 ```
 
 ---
